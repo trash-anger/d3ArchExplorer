@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Repo-Pipeline Visualizer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        #container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        #visualization {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        #info-panel {
+            width: 350px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #info-panel h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 20px;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        #info-panel .info-content {
+            color: #666;
+        }
+
+        #info-panel .info-item {
+            margin-bottom: 15px;
+        }
+
+        #info-panel .info-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        #info-panel .info-value {
+            color: #666;
+            padding-left: 10px;
+        }
+
+        #info-panel .connections-list {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        #info-panel .connections-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .repo-node {
+            fill: #4CAF50;
+            stroke: #388E3C;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pipeline-node {
+            fill: #2196F3;
+            stroke: #1976D2;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .repo-node:hover, .pipeline-node:hover {
+            opacity: 0.8;
+        }
+
+        .node-label {
+            font-size: 12px;
+            fill: white;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-width: 2;
+            stroke-opacity: 0.3;
+            fill: none;
+        }
+
+        .link.highlighted {
+            stroke: #FF9800;
+            stroke-width: 3;
+            stroke-opacity: 0.8;
+        }
+
+        .node-highlighted {
+            filter: drop-shadow(0 0 8px rgba(255, 152, 0, 0.8));
+            stroke-width: 3;
+        }
+
+        .node-dimmed {
+            opacity: 0.2;
+        }
+
+        .column-header {
+            font-size: 18px;
+            font-weight: bold;
+            fill: #333;
+        }
+
+        .empty-state {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="visualization"></div>
+        <div id="info-panel">
+            <div class="empty-state">
+                Cliquez sur un repository ou un pipeline pour voir ses informations
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Données exemple
+        const data = {
+            repos: [
+                { id: 'repo1', name: 'frontend-app', description: 'Application frontend React', url: 'https://github.com/org/frontend-app' },
+                { id: 'repo2', name: 'backend-api', description: 'API REST Node.js', url: 'https://github.com/org/backend-api' },
+                { id: 'repo3', name: 'shared-lib', description: 'Bibliothèque partagée', url: 'https://github.com/org/shared-lib' },
+                { id: 'repo4', name: 'mobile-app', description: 'Application mobile React Native', url: 'https://github.com/org/mobile-app' },
+                { id: 'repo5', name: 'database-migrations', description: 'Scripts de migration DB', url: 'https://github.com/org/db-migrations' }
+            ],
+            pipelines: [
+                { id: 'pipeline1', name: 'Build-Frontend', description: 'Build et déploiement frontend', status: 'success' },
+                { id: 'pipeline2', name: 'Build-Backend', description: 'Build et tests backend', status: 'success' },
+                { id: 'pipeline3', name: 'Integration-Tests', description: 'Tests d\'intégration', status: 'running' },
+                { id: 'pipeline4', name: 'Deploy-Production', description: 'Déploiement production', status: 'success' },
+                { id: 'pipeline5', name: 'Mobile-Build', description: 'Build application mobile', status: 'failed' },
+                { id: 'pipeline6', name: 'DB-Migration', description: 'Exécution migrations', status: 'success' }
+            ],
+            links: [
+                { source: 'repo1', target: 'pipeline1' },
+                { source: 'repo1', target: 'pipeline3' },
+                { source: 'repo2', target: 'pipeline2' },
+                { source: 'repo2', target: 'pipeline3' },
+                { source: 'repo2', target: 'pipeline4' },
+                { source: 'repo3', target: 'pipeline1' },
+                { source: 'repo3', target: 'pipeline2' },
+                { source: 'repo3', target: 'pipeline5' },
+                { source: 'repo4', target: 'pipeline5' },
+                { source: 'repo4', target: 'pipeline3' },
+                { source: 'repo5', target: 'pipeline6' },
+                { source: 'repo5', target: 'pipeline4' }
+            ]
+        };
+
+        // Configuration
+        const margin = { top: 80, right: 40, bottom: 40, left: 40 };
+        const vizContainer = d3.select('#visualization');
+        const containerWidth = vizContainer.node().getBoundingClientRect().width;
+        const containerHeight = vizContainer.node().getBoundingClientRect().height;
+        const width = containerWidth - margin.left - margin.right;
+        const height = containerHeight - margin.top - margin.bottom;
+
+        const nodeWidth = 180;
+        const nodeHeight = 50;
+        const columnSpacing = width * 0.6;
+
+        // Créer le SVG
+        const svg = vizContainer.append('svg')
+            .attr('width', containerWidth)
+            .attr('height', containerHeight);
+
+        const g = svg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // En-têtes de colonnes
+        g.append('text')
+            .attr('class', 'column-header')
+            .attr('x', nodeWidth / 2)
+            .attr('y', -40)
+            .attr('text-anchor', 'middle')
+            .text('Repositories');
+
+        g.append('text')
+            .attr('class', 'column-header')
+            .attr('x', columnSpacing + nodeWidth / 2)
+            .attr('y', -40)
+            .attr('text-anchor', 'middle')
+            .text('Pipelines Jenkins');
+
+        // Calculer les positions
+        const repoSpacing = (height - 100) / (data.repos.length + 1);
+        const pipelineSpacing = (height - 100) / (data.pipelines.length + 1);
+
+        data.repos.forEach((repo, i) => {
+            repo.x = 0;
+            repo.y = (i + 1) * repoSpacing;
+        });
+
+        data.pipelines.forEach((pipeline, i) => {
+            pipeline.x = columnSpacing;
+            pipeline.y = (i + 1) * pipelineSpacing;
+        });
+
+        // Créer les liens
+        const links = g.append('g')
+            .attr('class', 'links')
+            .selectAll('path')
+            .data(data.links)
+            .enter()
+            .append('path')
+            .attr('class', 'link')
+            .attr('d', d => {
+                const sourceNode = data.repos.find(r => r.id === d.source);
+                const targetNode = data.pipelines.find(p => p.id === d.target);
+                const sourceX = sourceNode.x + nodeWidth;
+                const sourceY = sourceNode.y + nodeHeight / 2;
+                const targetX = targetNode.x;
+                const targetY = targetNode.y + nodeHeight / 2;
+                const midX = (sourceX + targetX) / 2;
+                return `M ${sourceX},${sourceY} C ${midX},${sourceY} ${midX},${targetY} ${targetX},${targetY}`;
+            });
+
+        // Créer les nodes des repos
+        const repoNodes = g.append('g')
+            .attr('class', 'repo-nodes')
+            .selectAll('g')
+            .data(data.repos)
+            .enter()
+            .append('g')
+            .attr('transform', d => `translate(${d.x},${d.y})`);
+
+        repoNodes.append('rect')
+            .attr('class', 'repo-node')
+            .attr('width', nodeWidth)
+            .attr('height', nodeHeight)
+            .attr('rx', 5)
+            .on('mouseenter', handleNodeHover)
+            .on('mouseleave', handleNodeLeave)
+            .on('click', handleNodeClick);
+
+        repoNodes.append('text')
+            .attr('class', 'node-label')
+            .attr('x', nodeWidth / 2)
+            .attr('y', nodeHeight / 2)
+            .text(d => d.name.length > 20 ? d.name.substring(0, 18) + '...' : d.name);
+
+        // Créer les nodes des pipelines
+        const pipelineNodes = g.append('g')
+            .attr('class', 'pipeline-nodes')
+            .selectAll('g')
+            .data(data.pipelines)
+            .enter()
+            .append('g')
+            .attr('transform', d => `translate(${d.x},${d.y})`);
+
+        pipelineNodes.append('rect')
+            .attr('class', 'pipeline-node')
+            .attr('width', nodeWidth)
+            .attr('height', nodeHeight)
+            .attr('rx', 5)
+            .on('mouseenter', handleNodeHover)
+            .on('mouseleave', handleNodeLeave)
+            .on('click', handleNodeClick);
+
+        pipelineNodes.append('text')
+            .attr('class', 'node-label')
+            .attr('x', nodeWidth / 2)
+            .attr('y', nodeHeight / 2)
+            .text(d => d.name.length > 20 ? d.name.substring(0, 18) + '...' : d.name);
+
+        // Fonctions d'interaction
+        function handleNodeHover(event, d) {
+            const nodeType = d.url ? 'repo' : 'pipeline';
+            const connectedIds = getConnectedNodes(d.id, nodeType);
+
+            // Mettre en évidence les liens connectés
+            links.classed('highlighted', link =>
+                (link.source === d.id || link.target === d.id)
+            );
+
+            // Mettre en évidence les nodes connectés
+            repoNodes.selectAll('rect')
+                .classed('node-highlighted', repo =>
+                    repo.id === d.id || connectedIds.repos.includes(repo.id)
+                )
+                .classed('node-dimmed', repo =>
+                    repo.id !== d.id && !connectedIds.repos.includes(repo.id)
+                );
+
+            pipelineNodes.selectAll('rect')
+                .classed('node-highlighted', pipeline =>
+                    pipeline.id === d.id || connectedIds.pipelines.includes(pipeline.id)
+                )
+                .classed('node-dimmed', pipeline =>
+                    pipeline.id !== d.id && !connectedIds.pipelines.includes(pipeline.id)
+                );
+        }
+
+        function handleNodeLeave() {
+            links.classed('highlighted', false);
+            repoNodes.selectAll('rect')
+                .classed('node-highlighted', false)
+                .classed('node-dimmed', false);
+            pipelineNodes.selectAll('rect')
+                .classed('node-highlighted', false)
+                .classed('node-dimmed', false);
+        }
+
+        function handleNodeClick(event, d) {
+            event.stopPropagation();
+            const nodeType = d.url ? 'repo' : 'pipeline';
+            const connectedIds = getConnectedNodes(d.id, nodeType);
+            displayNodeInfo(d, nodeType, connectedIds);
+        }
+
+        function getConnectedNodes(nodeId, nodeType) {
+            const connectedRepos = [];
+            const connectedPipelines = [];
+
+            if (nodeType === 'repo') {
+                data.links.forEach(link => {
+                    if (link.source === nodeId) {
+                        connectedPipelines.push(link.target);
+                    }
+                });
+            } else {
+                data.links.forEach(link => {
+                    if (link.target === nodeId) {
+                        connectedRepos.push(link.source);
+                    }
+                });
+            }
+
+            return { repos: connectedRepos, pipelines: connectedPipelines };
+        }
+
+        function displayNodeInfo(node, nodeType, connectedIds) {
+            const infoPanel = d3.select('#info-panel');
+            infoPanel.html('');
+
+            const title = infoPanel.append('h2')
+                .text(nodeType === 'repo' ? 'Repository' : 'Pipeline Jenkins');
+
+            const content = infoPanel.append('div')
+                .attr('class', 'info-content');
+
+            // Nom
+            content.append('div')
+                .attr('class', 'info-item')
+                .html(`<div class="info-label">Nom:</div><div class="info-value">${node.name}</div>`);
+
+            // Description
+            content.append('div')
+                .attr('class', 'info-item')
+                .html(`<div class="info-label">Description:</div><div class="info-value">${node.description}</div>`);
+
+            // Informations spécifiques
+            if (nodeType === 'repo') {
+                content.append('div')
+                    .attr('class', 'info-item')
+                    .html(`<div class="info-label">URL:</div><div class="info-value"><a href="${node.url}" target="_blank">${node.url}</a></div>`);
+
+                // Pipelines connectés
+                const pipelinesSection = content.append('div')
+                    .attr('class', 'info-item');
+                pipelinesSection.append('div')
+                    .attr('class', 'info-label')
+                    .text(`Pipelines connectés (${connectedIds.pipelines.length}):`);
+
+                const pipelinesList = pipelinesSection.append('ul')
+                    .attr('class', 'connections-list');
+
+                connectedIds.pipelines.forEach(pipelineId => {
+                    const pipeline = data.pipelines.find(p => p.id === pipelineId);
+                    pipelinesList.append('li')
+                        .text(pipeline.name);
+                });
+            } else {
+                // Statut
+                const statusColors = {
+                    'success': '🟢',
+                    'running': '🟡',
+                    'failed': '🔴'
+                };
+                content.append('div')
+                    .attr('class', 'info-item')
+                    .html(`<div class="info-label">Statut:</div><div class="info-value">${statusColors[node.status] || ''} ${node.status}</div>`);
+
+                // Repos connectés
+                const reposSection = content.append('div')
+                    .attr('class', 'info-item');
+                reposSection.append('div')
+                    .attr('class', 'info-label')
+                    .text(`Repositories connectés (${connectedIds.repos.length}):`);
+
+                const reposList = reposSection.append('ul')
+                    .attr('class', 'connections-list');
+
+                connectedIds.repos.forEach(repoId => {
+                    const repo = data.repos.find(r => r.id === repoId);
+                    reposList.append('li')
+                        .text(repo.name);
+                });
+            }
+        }
+
+        // Responsive
+        window.addEventListener('resize', () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>
