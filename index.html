@@ -335,6 +335,10 @@
             opacity: 0.2;
         }
 
+        .link-dimmed {
+            stroke-opacity: 0.1;
+        }
+
         .column-header {
             font-size: 18px;
             font-weight: bold;
@@ -863,10 +867,10 @@
             // Afficher l'indicateur de mode focus
             d3.select('#focus-mode-indicator').style('display', 'block');
 
-            // Masquer les liens non connectés
-            links.style('display', link =>
-                (link.source === nodeId || link.target === nodeId) ? 'block' : 'none'
-            );
+            // Mettre en évidence les liens connectés et réduire la visibilité des autres
+            links
+                .classed('highlighted', link => link.source === nodeId || link.target === nodeId)
+                .classed('link-dimmed', link => link.source !== nodeId && link.target !== nodeId);
 
             // Mettre en évidence les nodes connectés et masquer les autres
             repoNodes.selectAll('rect')
@@ -892,8 +896,10 @@
             // Cacher l'indicateur
             d3.select('#focus-mode-indicator').style('display', 'none');
 
-            // Réafficher tous les liens
-            links.style('display', 'block');
+            // Réinitialiser tous les liens
+            links
+                .classed('highlighted', false)
+                .classed('link-dimmed', false);
 
             // Réinitialiser tous les nodes
             repoNodes.selectAll('rect')
