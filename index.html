@@ -25,6 +25,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             overflow: hidden;
+            position: relative;
         }
 
         #info-panel {
@@ -34,6 +35,74 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             padding: 20px;
             overflow-y: auto;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        #search-box {
+            width: 250px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #search-box:focus {
+            border-color: #4CAF50;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .zoom-btn {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background-color: #388E3C;
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+
+        #focus-mode-indicator {
+            padding: 8px 12px;
+            background-color: #FF9800;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            display: none;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        #focus-mode-indicator:hover {
+            background-color: #F57C00;
         }
 
         #info-panel h2 {
@@ -139,7 +208,17 @@
 </head>
 <body>
     <div id="container">
-        <div id="visualization"></div>
+        <div id="visualization">
+            <div id="controls">
+                <input type="text" id="search-box" placeholder="Rechercher un repo ou pipeline...">
+                <div class="zoom-controls">
+                    <button class="zoom-btn" id="zoom-in">+</button>
+                    <button class="zoom-btn" id="zoom-out">−</button>
+                    <button class="zoom-btn" id="zoom-reset">Reset</button>
+                </div>
+                <div id="focus-mode-indicator">Mode Focus - Cliquez pour quitter</div>
+            </div>
+        </div>
         <div id="info-panel">
             <div class="empty-state">
                 Cliquez sur un repository ou un pipeline pour voir ses informations
@@ -193,6 +272,13 @@
         const nodeHeight = 50;
         const columnSpacing = width * 0.6;
 
+        // État de l'application
+        let focusMode = {
+            active: false,
+            nodeId: null,
+            nodeType: null
+        };
+
         // Créer le SVG
         const svg = vizContainer.append('svg')
             .attr('width', containerWidth)
@@ -200,6 +286,15 @@
 
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Configurer le zoom
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform);
+            });
+
+        svg.call(zoom);
 
         // En-têtes de colonnes
         g.append('text')
@@ -265,7 +360,8 @@
             .attr('rx', 5)
             .on('mouseenter', handleNodeHover)
             .on('mouseleave', handleNodeLeave)
-            .on('click', handleNodeClick);
+            .on('click', handleNodeClick)
+            .on('dblclick', handleNodeDoubleClick);
 
         repoNodes.append('text')
             .attr('class', 'node-label')
@@ -289,7 +385,8 @@
             .attr('rx', 5)
             .on('mouseenter', handleNodeHover)
             .on('mouseleave', handleNodeLeave)
-            .on('click', handleNodeClick);
+            .on('click', handleNodeClick)
+            .on('dblclick', handleNodeDoubleClick);
 
         pipelineNodes.append('text')
             .attr('class', 'node-label')
@@ -299,6 +396,8 @@
 
         // Fonctions d'interaction
         function handleNodeHover(event, d) {
+            if (focusMode.active) return; // Pas de hover en mode focus
+
             const nodeType = d.url ? 'repo' : 'pipeline';
             const connectedIds = getConnectedNodes(d.id, nodeType);
 
@@ -432,6 +531,144 @@
                 });
             }
         }
+
+        // Fonction pour le mode Focus (double-clic)
+        function handleNodeDoubleClick(event, d) {
+            event.stopPropagation();
+            const nodeType = d.url ? 'repo' : 'pipeline';
+
+            if (focusMode.active && focusMode.nodeId === d.id) {
+                // Désactiver le mode focus si on double-clique sur le même node
+                exitFocusMode();
+            } else {
+                // Activer le mode focus
+                enterFocusMode(d.id, nodeType);
+            }
+        }
+
+        function enterFocusMode(nodeId, nodeType) {
+            focusMode.active = true;
+            focusMode.nodeId = nodeId;
+            focusMode.nodeType = nodeType;
+
+            const connectedIds = getConnectedNodes(nodeId, nodeType);
+
+            // Afficher l'indicateur de mode focus
+            d3.select('#focus-mode-indicator').style('display', 'block');
+
+            // Masquer les liens non connectés
+            links.style('display', link =>
+                (link.source === nodeId || link.target === nodeId) ? 'block' : 'none'
+            );
+
+            // Mettre en évidence les nodes connectés et masquer les autres
+            repoNodes.selectAll('rect')
+                .classed('node-highlighted', repo => repo.id === nodeId || connectedIds.repos.includes(repo.id))
+                .classed('node-dimmed', repo => repo.id !== nodeId && !connectedIds.repos.includes(repo.id));
+
+            repoNodes.selectAll('text')
+                .style('opacity', d => (d.id === nodeId || connectedIds.repos.includes(d.id)) ? 1 : 0.2);
+
+            pipelineNodes.selectAll('rect')
+                .classed('node-highlighted', pipeline => pipeline.id === nodeId || connectedIds.pipelines.includes(pipeline.id))
+                .classed('node-dimmed', pipeline => pipeline.id !== nodeId && !connectedIds.pipelines.includes(pipeline.id));
+
+            pipelineNodes.selectAll('text')
+                .style('opacity', d => (d.id === nodeId || connectedIds.pipelines.includes(d.id)) ? 1 : 0.2);
+        }
+
+        function exitFocusMode() {
+            focusMode.active = false;
+            focusMode.nodeId = null;
+            focusMode.nodeType = null;
+
+            // Cacher l'indicateur
+            d3.select('#focus-mode-indicator').style('display', 'none');
+
+            // Réafficher tous les liens
+            links.style('display', 'block');
+
+            // Réinitialiser tous les nodes
+            repoNodes.selectAll('rect')
+                .classed('node-highlighted', false)
+                .classed('node-dimmed', false);
+
+            repoNodes.selectAll('text').style('opacity', 1);
+
+            pipelineNodes.selectAll('rect')
+                .classed('node-highlighted', false)
+                .classed('node-dimmed', false);
+
+            pipelineNodes.selectAll('text').style('opacity', 1);
+        }
+
+        // Fonction de recherche
+        function handleSearch(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+
+            if (term === '') {
+                // Réinitialiser si la recherche est vide
+                repoNodes.selectAll('rect').classed('node-dimmed', false);
+                pipelineNodes.selectAll('rect').classed('node-dimmed', false);
+                repoNodes.selectAll('text').style('opacity', 1);
+                pipelineNodes.selectAll('text').style('opacity', 1);
+                links.style('opacity', 0.3);
+                return;
+            }
+
+            // Filtrer les repos
+            const matchingRepos = data.repos.filter(r =>
+                r.name.toLowerCase().includes(term) ||
+                r.description.toLowerCase().includes(term)
+            ).map(r => r.id);
+
+            // Filtrer les pipelines
+            const matchingPipelines = data.pipelines.filter(p =>
+                p.name.toLowerCase().includes(term) ||
+                p.description.toLowerCase().includes(term)
+            ).map(p => p.id);
+
+            // Appliquer le filtre visuel
+            repoNodes.selectAll('rect')
+                .classed('node-dimmed', d => !matchingRepos.includes(d.id));
+
+            repoNodes.selectAll('text')
+                .style('opacity', d => matchingRepos.includes(d.id) ? 1 : 0.2);
+
+            pipelineNodes.selectAll('rect')
+                .classed('node-dimmed', d => !matchingPipelines.includes(d.id));
+
+            pipelineNodes.selectAll('text')
+                .style('opacity', d => matchingPipelines.includes(d.id) ? 1 : 0.2);
+
+            // Mettre en évidence les liens connectés aux résultats
+            links.style('opacity', link => {
+                const sourceMatch = matchingRepos.includes(link.source);
+                const targetMatch = matchingPipelines.includes(link.target);
+                return (sourceMatch || targetMatch) ? 0.6 : 0.1;
+            });
+        }
+
+        // Contrôles de zoom
+        d3.select('#zoom-in').on('click', () => {
+            svg.transition().call(zoom.scaleBy, 1.3);
+        });
+
+        d3.select('#zoom-out').on('click', () => {
+            svg.transition().call(zoom.scaleBy, 0.7);
+        });
+
+        d3.select('#zoom-reset').on('click', () => {
+            svg.transition().call(zoom.transform, d3.zoomIdentity);
+        });
+
+        // Barre de recherche
+        d3.select('#search-box').on('input', function() {
+            handleSearch(this.value);
+        });
+
+        // Indicateur de mode focus
+        d3.select('#focus-mode-indicator').on('click', exitFocusMode);
 
         // Responsive
         window.addEventListener('resize', () => {
