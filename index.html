@@ -48,35 +48,81 @@
             transition: background-color 0.3s ease;
         }
 
-        #theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background-color: var(--bg-secondary);
-            border: 2px solid var(--border-color);
-            border-radius: 25px;
-            padding: 8px 20px;
+        .control-panel-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            box-shadow: 0 2px 8px var(--shadow-color);
-            transition: all 0.3s ease;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--header-border);
         }
 
-        #theme-toggle:hover {
-            transform: scale(1.05);
-        }
-
-        #theme-toggle span {
-            font-size: 14px;
-            font-weight: 600;
+        .control-panel-title {
+            font-size: 24px;
+            font-weight: bold;
             color: var(--text-primary);
+            margin: 0;
+        }
+
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        .theme-switch input:checked + .theme-slider {
+            background-color: #4CAF50;
+        }
+
+        .theme-switch input:checked + .theme-slider:before {
+            transform: translateX(26px);
         }
 
         .theme-icon {
-            font-size: 18px;
+            font-size: 14px;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .theme-icon.sun {
+            left: 5px;
+        }
+
+        .theme-icon.moon {
+            right: 5px;
         }
 
         #container {
@@ -97,7 +143,7 @@
             position: relative;
         }
 
-        #info-panel {
+        #control-panel {
             width: 350px;
             background-color: var(--bg-secondary);
             border-radius: 8px;
@@ -105,28 +151,35 @@
             padding: 20px;
             overflow-y: auto;
             transition: background-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
 
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .control-section {
+            margin-bottom: 20px;
+        }
+
+        .control-section h3 {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         #search-box {
-            width: 250px;
+            width: 100%;
             padding: 8px 12px;
-            border: 2px solid #ddd;
+            border: 2px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
             margin-bottom: 10px;
             outline: none;
             transition: border-color 0.3s;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            box-sizing: border-box;
         }
 
         #search-box:focus {
@@ -136,17 +189,17 @@
         .zoom-controls {
             display: flex;
             gap: 5px;
-            margin-bottom: 10px;
         }
 
         .zoom-btn {
+            flex: 1;
             padding: 8px 12px;
             background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             transition: background-color 0.3s;
         }
@@ -168,126 +221,68 @@
             display: none;
             cursor: pointer;
             text-align: center;
-            margin-top: 5px;
+            margin-top: 10px;
         }
 
         #focus-mode-indicator:hover {
             background-color: #F57C00;
         }
 
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .info-details {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
         }
 
-        #search-box {
-            width: 250px;
-            padding: 8px 12px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            margin-bottom: 10px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        #search-box:focus {
-            border-color: #4CAF50;
-        }
-
-        .zoom-controls {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-
-        .zoom-btn {
-            padding: 8px 12px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        .zoom-btn:hover {
-            background-color: #388E3C;
-        }
-
-        .zoom-btn:active {
-            transform: scale(0.95);
-        }
-
-        #focus-mode-indicator {
-            padding: 8px 12px;
-            background-color: #FF9800;
-            color: white;
-            border-radius: 4px;
-            font-weight: bold;
-            display: none;
-            cursor: pointer;
-            text-align: center;
-            margin-top: 5px;
-        }
-
-        #focus-mode-indicator:hover {
-            background-color: #F57C00;
-        }
-
-        #info-panel h2 {
+        .info-details h2 {
             margin-top: 0;
             color: var(--text-primary);
-            font-size: 20px;
+            font-size: 16px;
             border-bottom: 2px solid var(--header-border);
             padding-bottom: 10px;
-        }
-
-        #info-panel .info-content {
-            color: var(--text-secondary);
-        }
-
-        #info-panel .info-item {
             margin-bottom: 15px;
         }
 
-        #info-panel .info-label {
+        .info-details .info-content {
+            color: var(--text-secondary);
+        }
+
+        .info-details .info-item {
+            margin-bottom: 15px;
+        }
+
+        .info-details .info-label {
             font-weight: bold;
             color: var(--text-primary);
             margin-bottom: 5px;
+            font-size: 12px;
         }
 
-        #info-panel .info-value {
+        .info-details .info-value {
             color: var(--text-secondary);
             padding-left: 10px;
+            font-size: 12px;
         }
 
-        #info-panel .info-value a {
+        .info-details .info-value a {
             color: #2196F3;
             text-decoration: none;
         }
 
-        #info-panel .info-value a:hover {
+        .info-details .info-value a:hover {
             text-decoration: underline;
         }
 
-        #info-panel .connections-list {
+        .info-details .connections-list {
             list-style: none;
             padding-left: 10px;
         }
 
-        #info-panel .connections-list li {
+        .info-details .connections-list li {
             padding: 5px 0;
             border-bottom: 1px solid var(--border-color);
             color: var(--text-secondary);
+            font-size: 12px;
         }
 
         .repo-node {
@@ -350,44 +345,54 @@
             color: var(--text-tertiary);
             font-style: italic;
             text-align: center;
-            padding: 40px;
+            padding: 20px;
+            font-size: 12px;
         }
 
-        #stats {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background-color: var(--bg-secondary);
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 15px;
+        .stats-section {
+            border-top: 2px solid var(--border-color);
+            padding-top: 15px;
+            margin-top: auto;
+        }
+
+        .stats-section h3 {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-section div {
+            margin: 5px 0;
             font-size: 12px;
             color: var(--text-secondary);
-            box-shadow: 0 2px 8px var(--shadow-color);
-            z-index: 1000;
         }
 
-        #stats div {
-            margin: 3px 0;
+        .stats-section strong {
+            color: var(--text-primary);
         }
     </style>
 </head>
 <body>
-    <div id="theme-toggle" onclick="toggleTheme()">
-        <span class="theme-icon" id="theme-icon">🌙</span>
-        <span id="theme-label">Dark Mode</span>
-    </div>
-
-    <div id="stats">
-        <div><strong>Statistiques:</strong></div>
-        <div id="total-repos">Repos: 0</div>
-        <div id="total-pipelines">Pipelines: 0</div>
-        <div id="total-connections">Connexions: 0</div>
-    </div>
-
     <div id="container">
-        <div id="visualization">
-            <div id="controls">
+        <div id="control-panel">
+            <!-- En-tête avec titre et switch thème -->
+            <div class="control-panel-header">
+                <h1 class="control-panel-title">ArchExplorer</h1>
+                <label class="theme-switch">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="theme-slider">
+                        <span class="theme-icon sun">☀️</span>
+                        <span class="theme-icon moon">🌙</span>
+                    </span>
+                </label>
+            </div>
+
+            <!-- Section Contrôles -->
+            <div class="control-section">
+                <h3>Contrôles</h3>
                 <input type="text" id="search-box" placeholder="Rechercher un repo ou pipeline...">
                 <div class="zoom-controls">
                     <button class="zoom-btn" id="zoom-in">+</button>
@@ -396,12 +401,24 @@
                 </div>
                 <div id="focus-mode-indicator">Mode Focus - Cliquez pour quitter</div>
             </div>
-        </div>
-        <div id="info-panel">
-            <div class="empty-state">
-                Cliquez sur un repository ou un pipeline pour voir ses informations
+
+            <!-- Section Détails -->
+            <div class="info-details">
+                <div class="empty-state">
+                    Cliquez sur un repository ou un pipeline pour voir ses informations
+                </div>
+            </div>
+
+            <!-- Section Statistiques -->
+            <div class="stats-section">
+                <h3>Statistiques</h3>
+                <div id="total-repos">Repos: 0</div>
+                <div id="total-pipelines">Pipelines: 0</div>
+                <div id="total-connections">Connexions: 0</div>
             </div>
         </div>
+
+        <div id="visualization"></div>
     </div>
 
     <script>
@@ -498,24 +515,14 @@
         document.getElementById('total-connections').textContent = `Connexions: ${data.links.length}`;
 
         // Gestion du thème
+        const themeToggle = document.getElementById('theme-toggle');
+
         function toggleTheme() {
             const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const newTheme = themeToggle.checked ? 'dark' : 'light';
 
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-
-            const icon = document.getElementById('theme-icon');
-            const label = document.getElementById('theme-label');
-
-            if (newTheme === 'dark') {
-                icon.textContent = '🌙';
-                label.textContent = 'Dark Mode';
-            } else {
-                icon.textContent = '☀️';
-                label.textContent = 'Light Mode';
-            }
 
             // Redessiner pour appliquer les couleurs
             updateColors();
@@ -524,13 +531,10 @@
         // Charger le thème sauvegardé
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
-        if (savedTheme === 'dark') {
-            document.getElementById('theme-icon').textContent = '🌙';
-            document.getElementById('theme-label').textContent = 'Dark Mode';
-        } else {
-            document.getElementById('theme-icon').textContent = '☀️';
-            document.getElementById('theme-label').textContent = 'Light Mode';
-        }
+        themeToggle.checked = savedTheme === 'dark';
+
+        // Événement pour le toggle
+        themeToggle.addEventListener('change', toggleTheme);
 
         function updateColors() {
             const styles = getComputedStyle(document.documentElement);
@@ -756,7 +760,7 @@
         }
 
         function displayNodeInfo(node, nodeType, connectedIds) {
-            const infoPanel = d3.select('#info-panel');
+            const infoPanel = d3.select('.info-details');
             infoPanel.html('');
 
             const title = infoPanel.append('h2')
