@@ -693,7 +693,21 @@
 
         // Fonctions d'interaction
         function handleNodeHover(event, d) {
-            if (focusMode.active) return; // Pas de hover en mode focus
+            // En mode focus, autoriser le hover uniquement sur les nodes connectés
+            if (focusMode.active) {
+                const nodeType = d.url ? 'repo' : 'pipeline';
+                const focusedNode = nodeType === 'repo'
+                    ? data.repos.find(r => r.id === focusMode.nodeId)
+                    : data.pipelines.find(p => p.id === focusMode.nodeId);
+                const focusConnectedIds = getConnectedNodes(focusMode.nodeId, focusMode.nodeType);
+
+                // Vérifier si le node survolé est connecté au node focalisé
+                const isConnected = d.id === focusMode.nodeId ||
+                    focusConnectedIds.repos.includes(d.id) ||
+                    focusConnectedIds.pipelines.includes(d.id);
+
+                if (!isConnected) return; // Ne pas permettre le hover sur les nodes non connectés
+            }
 
             const nodeType = d.url ? 'repo' : 'pipeline';
             const connectedIds = getConnectedNodes(d.id, nodeType);
@@ -882,6 +896,15 @@
 
             pipelineNodes.selectAll('text')
                 .style('opacity', d => (d.id === nodeId || connectedIds.pipelines.includes(d.id)) ? 1 : 0.2);
+
+            // Appliquer les effets de hover sur le node focalisé
+            const focusedNode = nodeType === 'repo'
+                ? data.repos.find(r => r.id === nodeId)
+                : data.pipelines.find(p => p.id === nodeId);
+
+            if (focusedNode) {
+                handleNodeHover({ stopPropagation: () => {} }, focusedNode);
+            }
         }
 
         function exitFocusMode() {
