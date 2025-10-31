@@ -6,35 +6,173 @@
     <title>D3 Repo-Pipeline Visualizer</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+        :root {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --border-color: #eee;
+            --header-border: #4CAF50;
+            --repo-fill: #4CAF50;
+            --repo-stroke: #388E3C;
+            --pipeline-fill: #2196F3;
+            --pipeline-stroke: #1976D2;
+            --link-color: #999;
+            --highlight-color: #FF9800;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #808080;
+            --border-color: #404040;
+            --header-border: #4CAF50;
+            --repo-fill: #388E3C;
+            --repo-stroke: #2E7D32;
+            --pipeline-fill: #1976D2;
+            --pipeline-stroke: #1565C0;
+            --link-color: #666;
+            --highlight-color: #FF9800;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+        }
+
         body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
+            background-color: var(--bg-primary);
+            transition: background-color 0.3s ease;
+        }
+
+        #theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            transition: all 0.3s ease;
+        }
+
+        #theme-toggle:hover {
+            transform: scale(1.05);
+        }
+
+        #theme-toggle span {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .theme-icon {
+            font-size: 18px;
         }
 
         #container {
             display: flex;
             gap: 20px;
-            height: calc(100vh - 40px);
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         #visualization {
             flex: 1;
-            background-color: white;
+            background-color: var(--bg-secondary);
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            overflow: auto;
+            transition: background-color 0.3s ease;
             position: relative;
         }
 
         #info-panel {
             width: 350px;
-            background-color: white;
+            background-color: var(--bg-secondary);
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px var(--shadow-color);
             padding: 20px;
             overflow-y: auto;
+            transition: background-color 0.3s ease;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        #search-box {
+            width: 250px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #search-box:focus {
+            border-color: #4CAF50;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .zoom-btn {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background-color: #388E3C;
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+
+        #focus-mode-indicator {
+            padding: 8px 12px;
+            background-color: #FF9800;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            display: none;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        #focus-mode-indicator:hover {
+            background-color: #F57C00;
         }
 
         #controls {
@@ -107,14 +245,14 @@
 
         #info-panel h2 {
             margin-top: 0;
-            color: #333;
+            color: var(--text-primary);
             font-size: 20px;
-            border-bottom: 2px solid #4CAF50;
+            border-bottom: 2px solid var(--header-border);
             padding-bottom: 10px;
         }
 
         #info-panel .info-content {
-            color: #666;
+            color: var(--text-secondary);
         }
 
         #info-panel .info-item {
@@ -123,13 +261,22 @@
 
         #info-panel .info-label {
             font-weight: bold;
-            color: #333;
+            color: var(--text-primary);
             margin-bottom: 5px;
         }
 
         #info-panel .info-value {
-            color: #666;
+            color: var(--text-secondary);
             padding-left: 10px;
+        }
+
+        #info-panel .info-value a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+
+        #info-panel .info-value a:hover {
+            text-decoration: underline;
         }
 
         #info-panel .connections-list {
@@ -139,20 +286,21 @@
 
         #info-panel .connections-list li {
             padding: 5px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
         }
 
         .repo-node {
-            fill: #4CAF50;
-            stroke: #388E3C;
+            fill: var(--repo-fill);
+            stroke: var(--repo-stroke);
             stroke-width: 2;
             cursor: pointer;
             transition: all 0.3s;
         }
 
         .pipeline-node {
-            fill: #2196F3;
-            stroke: #1976D2;
+            fill: var(--pipeline-fill);
+            stroke: var(--pipeline-stroke);
             stroke-width: 2;
             cursor: pointer;
             transition: all 0.3s;
@@ -163,7 +311,7 @@
         }
 
         .node-label {
-            font-size: 12px;
+            font-size: 10px;
             fill: white;
             pointer-events: none;
             text-anchor: middle;
@@ -171,14 +319,14 @@
         }
 
         .link {
-            stroke: #999;
-            stroke-width: 2;
+            stroke: var(--link-color);
+            stroke-width: 1.5;
             stroke-opacity: 0.3;
             fill: none;
         }
 
         .link.highlighted {
-            stroke: #FF9800;
+            stroke: var(--highlight-color);
             stroke-width: 3;
             stroke-opacity: 0.8;
         }
@@ -195,18 +343,48 @@
         .column-header {
             font-size: 18px;
             font-weight: bold;
-            fill: #333;
+            fill: var(--text-primary);
         }
 
         .empty-state {
-            color: #999;
+            color: var(--text-tertiary);
             font-style: italic;
             text-align: center;
             padding: 40px;
         }
+
+        #stats {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            box-shadow: 0 2px 8px var(--shadow-color);
+            z-index: 1000;
+        }
+
+        #stats div {
+            margin: 3px 0;
+        }
     </style>
 </head>
 <body>
+    <div id="theme-toggle" onclick="toggleTheme()">
+        <span class="theme-icon" id="theme-icon">🌙</span>
+        <span id="theme-label">Dark Mode</span>
+    </div>
+
+    <div id="stats">
+        <div><strong>Statistiques:</strong></div>
+        <div id="total-repos">Repos: 0</div>
+        <div id="total-pipelines">Pipelines: 0</div>
+        <div id="total-connections">Connexions: 0</div>
+    </div>
+
     <div id="container">
         <div id="visualization">
             <div id="controls">
@@ -227,49 +405,164 @@
     </div>
 
     <script>
-        // Données exemple
-        const data = {
-            repos: [
-                { id: 'repo1', name: 'frontend-app', description: 'Application frontend React', url: 'https://github.com/org/frontend-app' },
-                { id: 'repo2', name: 'backend-api', description: 'API REST Node.js', url: 'https://github.com/org/backend-api' },
-                { id: 'repo3', name: 'shared-lib', description: 'Bibliothèque partagée', url: 'https://github.com/org/shared-lib' },
-                { id: 'repo4', name: 'mobile-app', description: 'Application mobile React Native', url: 'https://github.com/org/mobile-app' },
-                { id: 'repo5', name: 'database-migrations', description: 'Scripts de migration DB', url: 'https://github.com/org/db-migrations' }
-            ],
-            pipelines: [
-                { id: 'pipeline1', name: 'Build-Frontend', description: 'Build et déploiement frontend', status: 'success' },
-                { id: 'pipeline2', name: 'Build-Backend', description: 'Build et tests backend', status: 'success' },
-                { id: 'pipeline3', name: 'Integration-Tests', description: 'Tests d\'intégration', status: 'running' },
-                { id: 'pipeline4', name: 'Deploy-Production', description: 'Déploiement production', status: 'success' },
-                { id: 'pipeline5', name: 'Mobile-Build', description: 'Build application mobile', status: 'failed' },
-                { id: 'pipeline6', name: 'DB-Migration', description: 'Exécution migrations', status: 'success' }
-            ],
-            links: [
-                { source: 'repo1', target: 'pipeline1' },
-                { source: 'repo1', target: 'pipeline3' },
-                { source: 'repo2', target: 'pipeline2' },
-                { source: 'repo2', target: 'pipeline3' },
-                { source: 'repo2', target: 'pipeline4' },
-                { source: 'repo3', target: 'pipeline1' },
-                { source: 'repo3', target: 'pipeline2' },
-                { source: 'repo3', target: 'pipeline5' },
-                { source: 'repo4', target: 'pipeline5' },
-                { source: 'repo4', target: 'pipeline3' },
-                { source: 'repo5', target: 'pipeline6' },
-                { source: 'repo5', target: 'pipeline4' }
-            ]
-        };
+        // Fonction de génération de données
+        function generateData() {
+            const repoTypes = ['frontend', 'backend', 'api', 'service', 'lib', 'utils', 'sdk', 'mobile', 'web', 'desktop'];
+            const repoNames = ['auth', 'payment', 'analytics', 'core', 'common', 'shared', 'ui', 'admin', 'client', 'server'];
+            const pipelineTypes = ['build', 'test', 'deploy', 'integration', 'e2e', 'unit', 'lint', 'security', 'performance'];
+            const environments = ['dev', 'staging', 'prod', 'qa', 'uat'];
+            const statuses = ['success', 'running', 'failed', 'pending'];
+
+            const repos = [];
+            for (let i = 1; i <= 150; i++) {
+                const type = repoTypes[Math.floor(Math.random() * repoTypes.length)];
+                const name = repoNames[Math.floor(Math.random() * repoNames.length)];
+                repos.push({
+                    id: `repo${i}`,
+                    name: `${type}-${name}-${i}`,
+                    description: `Repository ${type} pour ${name} (v${Math.floor(Math.random() * 10) + 1}.${Math.floor(Math.random() * 10)})`,
+                    url: `https://github.com/org/${type}-${name}-${i}`
+                });
+            }
+
+            const pipelines = [];
+            for (let i = 1; i <= 100; i++) {
+                const type = pipelineTypes[Math.floor(Math.random() * pipelineTypes.length)];
+                const env = environments[Math.floor(Math.random() * environments.length)];
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                pipelines.push({
+                    id: `pipeline${i}`,
+                    name: `${type}-${env}-${i}`,
+                    description: `Pipeline ${type} pour l'environnement ${env}`,
+                    status: status
+                });
+            }
+
+            // Générer des liens avec une distribution variée
+            const links = [];
+            const linkCounts = new Map();
+
+            // Initialiser les compteurs
+            repos.forEach(r => linkCounts.set(r.id, 0));
+            pipelines.forEach(p => linkCounts.set(p.id, 0));
+
+            // Distribution: certains sans liens, d'autres avec beaucoup
+            repos.forEach(repo => {
+                const rand = Math.random();
+                let numConnections = 0;
+
+                if (rand < 0.15) {
+                    // 15% sans connexion
+                    numConnections = 0;
+                } else if (rand < 0.40) {
+                    // 25% avec 1-3 connexions
+                    numConnections = Math.floor(Math.random() * 3) + 1;
+                } else if (rand < 0.70) {
+                    // 30% avec 4-8 connexions
+                    numConnections = Math.floor(Math.random() * 5) + 4;
+                } else if (rand < 0.90) {
+                    // 20% avec 9-15 connexions
+                    numConnections = Math.floor(Math.random() * 7) + 9;
+                } else {
+                    // 10% avec 16-25 connexions
+                    numConnections = Math.floor(Math.random() * 10) + 16;
+                }
+
+                // Créer les connexions
+                const availablePipelines = [...pipelines];
+                for (let i = 0; i < numConnections && availablePipelines.length > 0; i++) {
+                    const pipelineIndex = Math.floor(Math.random() * availablePipelines.length);
+                    const pipeline = availablePipelines[pipelineIndex];
+
+                    // Vérifier que le pipeline n'a pas déjà trop de connexions
+                    if (linkCounts.get(pipeline.id) < 25) {
+                        links.push({
+                            source: repo.id,
+                            target: pipeline.id
+                        });
+                        linkCounts.set(repo.id, linkCounts.get(repo.id) + 1);
+                        linkCounts.set(pipeline.id, linkCounts.get(pipeline.id) + 1);
+                    }
+                    availablePipelines.splice(pipelineIndex, 1);
+                }
+            });
+
+            return { repos, pipelines, links };
+        }
+
+        const data = generateData();
+
+        // Mettre à jour les statistiques
+        document.getElementById('total-repos').textContent = `Repos: ${data.repos.length}`;
+        document.getElementById('total-pipelines').textContent = `Pipelines: ${data.pipelines.length}`;
+        document.getElementById('total-connections').textContent = `Connexions: ${data.links.length}`;
+
+        // Gestion du thème
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            const icon = document.getElementById('theme-icon');
+            const label = document.getElementById('theme-label');
+
+            if (newTheme === 'dark') {
+                icon.textContent = '🌙';
+                label.textContent = 'Dark Mode';
+            } else {
+                icon.textContent = '☀️';
+                label.textContent = 'Light Mode';
+            }
+
+            // Redessiner pour appliquer les couleurs
+            updateColors();
+        }
+
+        // Charger le thème sauvegardé
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        if (savedTheme === 'dark') {
+            document.getElementById('theme-icon').textContent = '🌙';
+            document.getElementById('theme-label').textContent = 'Dark Mode';
+        } else {
+            document.getElementById('theme-icon').textContent = '☀️';
+            document.getElementById('theme-label').textContent = 'Light Mode';
+        }
+
+        function updateColors() {
+            const styles = getComputedStyle(document.documentElement);
+
+            // Mettre à jour les nodes
+            d3.selectAll('.repo-node')
+                .style('fill', styles.getPropertyValue('--repo-fill'))
+                .style('stroke', styles.getPropertyValue('--repo-stroke'));
+
+            d3.selectAll('.pipeline-node')
+                .style('fill', styles.getPropertyValue('--pipeline-fill'))
+                .style('stroke', styles.getPropertyValue('--pipeline-stroke'));
+
+            // Mettre à jour les liens
+            d3.selectAll('.link')
+                .style('stroke', styles.getPropertyValue('--link-color'));
+
+            // Mettre à jour les en-têtes
+            d3.selectAll('.column-header')
+                .style('fill', styles.getPropertyValue('--text-primary'));
+        }
 
         // Configuration
         const margin = { top: 80, right: 40, bottom: 40, left: 40 };
         const vizContainer = d3.select('#visualization');
-        const containerWidth = vizContainer.node().getBoundingClientRect().width;
-        const containerHeight = vizContainer.node().getBoundingClientRect().height;
-        const width = containerWidth - margin.left - margin.right;
-        const height = containerHeight - margin.top - margin.bottom;
-
         const nodeWidth = 180;
-        const nodeHeight = 50;
+        const nodeHeight = 40;
+
+        // Calculer la hauteur nécessaire pour afficher tous les repos
+        const totalHeight = Math.max(data.repos.length * (nodeHeight + 10), data.pipelines.length * (nodeHeight + 10)) + margin.top + margin.bottom;
+        const containerWidth = vizContainer.node().getBoundingClientRect().width;
+        const width = containerWidth - margin.left - margin.right;
         const columnSpacing = width * 0.6;
 
         // État de l'application
@@ -279,10 +572,10 @@
             nodeType: null
         };
 
-        // Créer le SVG
+        // Créer le SVG avec scrolling
         const svg = vizContainer.append('svg')
             .attr('width', containerWidth)
-            .attr('height', containerHeight);
+            .attr('height', totalHeight);
 
         const g = svg.append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
@@ -312,17 +605,17 @@
             .text('Pipelines Jenkins');
 
         // Calculer les positions
-        const repoSpacing = (height - 100) / (data.repos.length + 1);
-        const pipelineSpacing = (height - 100) / (data.pipelines.length + 1);
+        const repoSpacing = nodeHeight + 10;
+        const pipelineSpacing = nodeHeight + 10;
 
         data.repos.forEach((repo, i) => {
             repo.x = 0;
-            repo.y = (i + 1) * repoSpacing;
+            repo.y = i * repoSpacing;
         });
 
         data.pipelines.forEach((pipeline, i) => {
             pipeline.x = columnSpacing;
-            pipeline.y = (i + 1) * pipelineSpacing;
+            pipeline.y = i * pipelineSpacing;
         });
 
         // Créer les liens
@@ -367,7 +660,7 @@
             .attr('class', 'node-label')
             .attr('x', nodeWidth / 2)
             .attr('y', nodeHeight / 2)
-            .text(d => d.name.length > 20 ? d.name.substring(0, 18) + '...' : d.name);
+            .text(d => d.name.length > 22 ? d.name.substring(0, 20) + '...' : d.name);
 
         // Créer les nodes des pipelines
         const pipelineNodes = g.append('g')
@@ -392,7 +685,7 @@
             .attr('class', 'node-label')
             .attr('x', nodeWidth / 2)
             .attr('y', nodeHeight / 2)
-            .text(d => d.name.length > 20 ? d.name.substring(0, 18) + '...' : d.name);
+            .text(d => d.name.length > 22 ? d.name.substring(0, 20) + '...' : d.name);
 
         // Fonctions d'interaction
         function handleNodeHover(event, d) {
@@ -495,20 +788,28 @@
                     .attr('class', 'info-label')
                     .text(`Pipelines connectés (${connectedIds.pipelines.length}):`);
 
-                const pipelinesList = pipelinesSection.append('ul')
-                    .attr('class', 'connections-list');
+                if (connectedIds.pipelines.length > 0) {
+                    const pipelinesList = pipelinesSection.append('ul')
+                        .attr('class', 'connections-list');
 
-                connectedIds.pipelines.forEach(pipelineId => {
-                    const pipeline = data.pipelines.find(p => p.id === pipelineId);
-                    pipelinesList.append('li')
-                        .text(pipeline.name);
-                });
+                    connectedIds.pipelines.forEach(pipelineId => {
+                        const pipeline = data.pipelines.find(p => p.id === pipelineId);
+                        pipelinesList.append('li')
+                            .text(pipeline.name);
+                    });
+                } else {
+                    pipelinesSection.append('div')
+                        .attr('class', 'info-value')
+                        .style('font-style', 'italic')
+                        .text('Aucun pipeline connecté');
+                }
             } else {
                 // Statut
                 const statusColors = {
                     'success': '🟢',
                     'running': '🟡',
-                    'failed': '🔴'
+                    'failed': '🔴',
+                    'pending': '⚪'
                 };
                 content.append('div')
                     .attr('class', 'info-item')
@@ -521,14 +822,16 @@
                     .attr('class', 'info-label')
                     .text(`Repositories connectés (${connectedIds.repos.length}):`);
 
-                const reposList = reposSection.append('ul')
-                    .attr('class', 'connections-list');
+                if (connectedIds.repos.length > 0) {
+                    const reposList = reposSection.append('ul')
+                        .attr('class', 'connections-list');
 
                 connectedIds.repos.forEach(repoId => {
                     const repo = data.repos.find(r => r.id === repoId);
                     reposList.append('li')
                         .text(repo.name);
                 });
+            }
             }
         }
 
@@ -674,6 +977,12 @@
         window.addEventListener('resize', () => {
             location.reload();
         });
+
+        // Indicateur de mode focus
+        d3.select('#focus-mode-indicator').on('click', exitFocusMode);
+
+        // Appliquer les couleurs initiales
+        updateColors();
     </script>
 </body>
 </html>
