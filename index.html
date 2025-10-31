@@ -698,12 +698,14 @@
             const nodeType = d.url ? 'repo' : 'pipeline';
             const connectedIds = getConnectedNodes(d.id, nodeType);
 
-            // Mettre en évidence les liens connectés
-            links.classed('highlighted', link =>
+            // Masquer complètement les liens non connectés et mettre en évidence les liens connectés
+            links.style('display', link =>
+                (link.source === d.id || link.target === d.id) ? 'block' : 'none'
+            ).classed('highlighted', link =>
                 (link.source === d.id || link.target === d.id)
             );
 
-            // Mettre en évidence les nodes connectés
+            // Mettre en évidence les nodes connectés et dimmer les non connectés
             repoNodes.selectAll('rect')
                 .classed('node-highlighted', repo =>
                     repo.id === d.id || connectedIds.repos.includes(repo.id)
@@ -722,7 +724,11 @@
         }
 
         function handleNodeLeave() {
-            links.classed('highlighted', false);
+            // Réafficher tous les liens et enlever le highlight
+            links.style('display', 'block')
+                .classed('highlighted', false);
+
+            // Réinitialiser tous les nodes
             repoNodes.selectAll('rect')
                 .classed('node-highlighted', false)
                 .classed('node-dimmed', false);
